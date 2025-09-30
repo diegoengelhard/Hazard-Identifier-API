@@ -18,6 +18,7 @@ export interface IBooking {
   description: string;
   products: any;
   internalNotes: string;
+  expectedIsHazardous?: boolean;
 }
 
 /**

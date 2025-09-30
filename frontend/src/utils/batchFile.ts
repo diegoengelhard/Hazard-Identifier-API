@@ -42,21 +42,23 @@ function normalize(raw: any): IBooking | null {
   const internalNotes =
     typeof raw.internalNotes === 'string' ? raw.internalNotes.trim() : '';
 
-  // companyName retained only if string
   const companyName =
     typeof raw.companyName === 'string' && raw.companyName.trim()
       ? raw.companyName.trim()
       : undefined;
 
+  const expectedIsHazardous =
+    typeof raw.expectedIsHazardous === 'boolean' ? raw.expectedIsHazardous : undefined;
+
   return {
-    // If the project interface marks some as optional no problem, extra safety:
     id,
     customerName,
     companyName,
     bookingDate,
     description: raw.description,
     products,
-    internalNotes
+    internalNotes,
+    expectedIsHazardous
   } as IBooking;
 }
 
@@ -69,17 +71,13 @@ export async function readBatchBookings(
   options: ReadOptions = {}
 ): Promise<IBooking[]> {
   const {
-    /**
-     * IF MORE SIZE NEEDED, ADJUST maxBytes DEFAULT (10MB)
-     */
-    maxBytes = 50 * 1024 * 1024, // 10MB default
+    maxBytes = 120 * 1024 * 1024, // 120MB default
     maxRecords = 150_000
   } = options;
 
-  // Basic file type checks
   const isJsonName = /\.json$/i.test(file.name);
   const isJsonMime =
-    file.type === 'application/json' || file.type === ''; // some browsers leave mime empty
+    file.type === 'application/json' || file.type === '';
   if (!isJsonName || !isJsonMime) {
     throw new Error('Only .json files are allowed.');
   }
@@ -127,10 +125,7 @@ export async function readBatchBookings(
     );
   }
 
-  // If many were discarded, inform via error? Prefer success with fewer:
   if (discarded > 0) {
-    // We signal via console; UI can decide if needed.
-    // eslint-disable-next-line no-console
     console.warn(
       `readBatchBookings: discarded ${discarded} malformed record(s); accepted ${bookings.length}.`
     );

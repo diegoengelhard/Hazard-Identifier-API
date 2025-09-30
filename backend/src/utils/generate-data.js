@@ -2,17 +2,16 @@
  * Large Batch Mock Data Generator
  * --------------------------------
  * Generates a large JSON array of booking objects for load / batch testing.
- *
+ * 
  * Usage (from repo root):
  *   node backend/src/utils/generate-data.js --count=50000
  *
  * Usage (from backend/ directory):
  *   node src/utils/generate-data.js --count=50000
  *
- * Or via npm script (after adding "gen:data"): 
+ * Or via npm script (after adding "gen:data"):
  *   npm run gen:data -- --count=50000
  *
- * Output: backend/src/mocks/batchMockTestData*.json (auto-incremented)
  */
 (async () => {
   const fs = require('fs');
@@ -42,7 +41,7 @@
     if (!fs.existsSync(base)) return base;
     let i = 1;
     while (true) {
-      const suffix = String(i).padStart(2, '2');
+      const suffix = String(i).padStart(2, '0');
       const candidate = path.join(MOCKS_DIR, `${BASE_FILENAME}-${suffix}${EXT}`);
       if (!fs.existsSync(candidate)) return candidate;
       i++;
@@ -65,7 +64,7 @@
     const hazProduct = pick(hazardousProducts);
     const nonHazProduct = pick(nonHazProducts);
 
-    // NEW: Bias to 10% hazardous attempts
+    // Ground truth label (10% hazardous attempt)
     const isHazardousAttempt = Math.random() < 0.10;
 
     let description = 'Customer is clearing out their garage. Contains old furniture and boxes.';
@@ -91,7 +90,8 @@
       bookingDate: faker.date.past({ years: 1 }).toISOString(),
       description,
       products,
-      internalNotes
+      internalNotes,
+      expectedIsHazardous: isHazardousAttempt // ground truth flag
     });
 
     if (i % 10000 === 0) {
