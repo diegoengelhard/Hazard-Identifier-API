@@ -12,6 +12,11 @@ function DashboardPage() {
   const [latestResult, setLatestResult] = useState<IClassificationResult | null>(null);
   const [history, setHistory] = useState<IClassificationResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  // Persistent cumulative stats separate from limited history
+  const [stats, setStats] = useState<{ totalClassified: number; totalHazardous: number }>({
+    totalClassified: 0,
+    totalHazardous: 0
+  });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Storage keys for localStorage
@@ -19,7 +24,8 @@ function DashboardPage() {
     products: 'id_products',
     history: 'id_history',
     latest: 'id_latest',
-    session: 'id_session'
+    session: 'id_session',
+    stats: 'id_stats'
   } as const;
 
   useEffect(() => {
@@ -34,6 +40,7 @@ function DashboardPage() {
         if (storedSession && storedSession !== sessionId) {
           localStorage.removeItem(STORAGE_KEYS.history);
           localStorage.removeItem(STORAGE_KEYS.latest);
+          localStorage.removeItem(STORAGE_KEYS.stats);
         }
         localStorage.setItem(STORAGE_KEYS.session, sessionId);
 
@@ -47,6 +54,9 @@ function DashboardPage() {
 
           const cachedLatest = localStorage.getItem(STORAGE_KEYS.latest);
           if (cachedLatest) setLatestResult(JSON.parse(cachedLatest));
+
+          const cachedStats = localStorage.getItem(STORAGE_KEYS.stats);
+          if (cachedStats) setStats(JSON.parse(cachedStats));
         } catch {
           // Ignore JSON parse errors
         }
@@ -61,6 +71,9 @@ function DashboardPage() {
 
           const cachedLatest = localStorage.getItem(STORAGE_KEYS.latest);
           if (cachedLatest) setLatestResult(JSON.parse(cachedLatest));
+
+          const cachedStats = localStorage.getItem(STORAGE_KEYS.stats);
+          if (cachedStats) setStats(JSON.parse(cachedStats));
         } catch {
           // Ignore JSON parse errors
         }
@@ -76,31 +89,42 @@ function DashboardPage() {
         setProducts(productList);
         // Added: persist product list (stable across reloads & restarts)
         localStorage.setItem(STORAGE_KEYS.products, JSON.stringify(productList));
-      } catch (err) {
+      } catch {
         toast.error('Could not load product list. Please check if the API is running.');
       }
     };
     fetchProducts();
   }, []);
 
+  const updateStats = (batchResults: IClassificationResult[]) => {
+    const hazardousInBatch = batchResults.reduce((acc, r) => acc + (r.isHazardous ? 1 : 0), 0);
+    setStats(prev => {
+      const next = {
+        totalClassified: prev.totalClassified + batchResults.length,
+        totalHazardous: prev.totalHazardous + hazardousInBatch
+      };
+      localStorage.setItem(STORAGE_KEYS.stats, JSON.stringify(next));
+      return next;
+    });
+  };
+
   const handleSingleClassification = async (bookingData: IBooking) => {
-    // Set loading state and clear previous errors
     setIsLoading(true);
-
-    // Call the API to classify the booking
     try {
-      // Call classification API for single booking
       const result = await classifySingleBooking(bookingData);
-      setLatestResult(result); // Update latest result state
+      setLatestResult(result);
 
-      // Update history and persist to localStorage
+      // Update limited history (show last 100)
       setHistory(prev => {
         const next = [result, ...prev].slice(0, 10);
         localStorage.setItem(STORAGE_KEYS.history, JSON.stringify(next));
         localStorage.setItem(STORAGE_KEYS.latest, JSON.stringify(result));
         return next;
       });
-    } catch (err: any) {
+
+      // Update cumulative stats
+      updateStats([result]);
+    } catch {
       toast.error('An unknown error occurred.');
       setLatestResult(null);
     } finally {
@@ -111,28 +135,30 @@ function DashboardPage() {
   // Handle batch file input change
   const handleBatchFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file) return; // No file selected, exit early
+    if (!file) return;
 
     setIsLoading(true);
     try {
-      // Read and parse the file content
+      // Use higher size limit & normalized parsing (readBatchBookings applies the limit internally)
       const bookings = await readBatchBookings(file);
       const results = await classifyBatch(bookings);
-      
-      // Update history and latest result
+
+      // Update limited history (prepend batch results then slice)
       setHistory(prev => {
-        const next = [...results, ...prev].slice(0, 10);
+        const next = [...results, ...prev].slice(0, 100);
         localStorage.setItem(STORAGE_KEYS.history, JSON.stringify(next));
         if (results[0]) localStorage.setItem(STORAGE_KEYS.latest, JSON.stringify(results[0]));
         return next;
       });
 
-      // Set latest result to the first in the batch
       if (results.length > 0) setLatestResult(results[0]);
 
-      toast.success(`Successfully classified ${results.length} bookings.`);
+      // Update cumulative stats
+      updateStats(results);
+
+      toast.success(`Successfully classified ${results.length.toLocaleString()} bookings.`);
     } catch (err: any) {
-      toast.error('Failed to process batch file. Ensure it is a valid JSON array of bookings.');
+      toast.error(err?.message || 'Failed to process batch file.');
       setLatestResult(null);
     } finally {
       setIsLoading(false);
@@ -144,8 +170,10 @@ function DashboardPage() {
   const clearCachedData = () => {
     localStorage.removeItem(STORAGE_KEYS.history);
     localStorage.removeItem(STORAGE_KEYS.latest);
+    localStorage.removeItem(STORAGE_KEYS.stats);
     setHistory([]);
     setLatestResult(null);
+    setStats({ totalClassified: 0, totalHazardous: 0 });
     toast.info('Session stats cleared.');
   };
 
@@ -171,7 +199,6 @@ function DashboardPage() {
             <span aria-hidden className="text-red-500">↺</span>
             <span>Reset Session (Clear Stats)</span>
           </button>
-         
         </div>
 
         {/* Right Column */}
@@ -179,6 +206,7 @@ function DashboardPage() {
           <ClassificationStatus
             latestResult={latestResult}
             history={history}
+            stats={stats}
             onClassifyBatchClick={() => fileInputRef.current?.click()}
           />
           <HistoryPanel history={history} />

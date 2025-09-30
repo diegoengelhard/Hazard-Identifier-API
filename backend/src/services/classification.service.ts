@@ -98,8 +98,15 @@ export const classifyBooking = (booking: IBooking): IClassificationResult => {
 export const classifyBookingBatch = (
   bookings: IBooking[]
 ): IClassificationResult[] => {
-  // Use .map() to efficiently process each booking in the array.
-  return bookings.map((booking) => classifyBooking(booking));
+  const CHUNK_SIZE = 500; // adjust based on performance testing
+  const out: IClassificationResult[] = [];
+  
+  for (let i = 0; i < bookings.length; i += CHUNK_SIZE) {
+    const slice = bookings.slice(i, i + CHUNK_SIZE);
+    // classify each booking in the slice and accumulate results
+    out.push(...slice.map(b => classifyBooking(b)));
+  }
+  return out;
 };
 
 /**
