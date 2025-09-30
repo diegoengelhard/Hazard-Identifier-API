@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import Select, { MultiValue } from 'react-select';
 import { IBooking, IProduct } from '../ts/interfaces';
+import { toast } from 'react-toastify';
 
 interface Props {
   products: IProduct[];
@@ -26,6 +27,22 @@ function SingleClassificationForm({ products, onSubmit, isLoading }: Props) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    // validate that description, internalNotes and at least one product is provided
+    if (!description.trim()) {
+      toast.error('Description is required.');
+      return;
+    }
+    if (!internalNotes.trim()) {
+      toast.error('Internal notes are required.');
+      return;
+    }
+
+    if (selectedProducts.length === 0) {
+      toast.error('At least one product must be selected.');
+      return;
+    }
+
     onSubmit({
       id: bookingId || `BOOK-${Date.now()}`,
       customerName: 'Demo User',
@@ -74,7 +91,6 @@ function SingleClassificationForm({ products, onSubmit, isLoading }: Props) {
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Describe the booking..."
-            required
           />
         </div>
         
@@ -86,7 +102,7 @@ function SingleClassificationForm({ products, onSubmit, isLoading }: Props) {
             className="mt-1 block w-full rounded-md border border-gray-300 bg-white/60 px-3 py-2 text-sm placeholder:text-gray-400 focus:border-gray-400 focus:ring-0 resize-y"
             value={internalNotes}
             onChange={(e) => setInternalNotes(e.target.value)}
-            placeholder="Optional notes..."
+            placeholder="Add interal details..."
           />
         </div>
 

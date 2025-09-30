@@ -22,7 +22,7 @@ export const classifyBooking = (booking: IBooking): IClassificationResult => {
   ].join(" ");
 
   // 1. Check if the products listed in the booking match our known product list.
-  booking.products.forEach((productName) => {
+  (booking.products as any[]).forEach((productName: any) => {
     const productMatch = lexicon.products.find(
       (p) => p.displayName === productName
     );
