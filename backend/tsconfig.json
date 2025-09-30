@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "target": "ES6",                      // Choose your JavaScript version
+    "module": "commonjs",                  // For Node.js
+    "outDir": "./dist",                    // Compiled JS files will go here
+    "rootDir": "./",                        // Your TypeScript source files are at the root
+    "strict": true,                        // Enable strict type checking
+    "esModuleInterop": true,               // Needed for ES6-style imports
+    "skipLibCheck": true,                  // Skip type checking for libraries
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": ["*.ts", "bin/**/*.ts", "src/routes/**/*.ts"],  // Includes all TypeScript files in the root, bin, and routes directories
+  "exclude": ["dist", "node_modules"]      // Excludes compiled files and dependencies
+}
