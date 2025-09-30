@@ -145,7 +145,7 @@ function DashboardPage() {
 
       // Update limited history (prepend batch results then slice)
       setHistory(prev => {
-        const next = [...results, ...prev].slice(0, 100);
+        const next = [...results, ...prev].slice(0, 10);
         localStorage.setItem(STORAGE_KEYS.history, JSON.stringify(next));
         if (results[0]) localStorage.setItem(STORAGE_KEYS.latest, JSON.stringify(results[0]));
         return next;
