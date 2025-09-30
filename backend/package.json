@@ -5,7 +5,8 @@
   "scripts": {
     "start": "ts-node bin/www",
     "dev": "nodemon --watch 'bin/**/*.ts' --watch 'routes/**/*.ts' --exec 'ts-node' bin/www",
-    "start:dev": "nodemon --watch 'bin/**/*.ts' --watch 'routes/**/*.ts' --exec 'ts-node' bin/www"
+    "start:dev": "nodemon --watch 'bin/**/*.ts' --watch 'routes/**/*.ts' --exec 'ts-node' bin/www",
+    "gen:data": "node src/utils/generate-data.js" 
   },
   "dependencies": {
     "cookie-parser": "~1.4.4",
@@ -18,6 +19,7 @@
     "morgan": "~1.9.1"
   },
   "devDependencies": {
+    "@faker-js/faker": "^10.0.0",
     "@types/cookie-parser": "^1.4.7",
     "@types/cors": "^2.8.17",
     "@types/debug": "^4.1.12",
