@@ -3,11 +3,11 @@
  */
 export interface IBooking {
   id: string;
-  customerName: string;
+  customerName?: string;
   companyName?: string;
-  bookingDate: string;
+  bookingDate?: string;
   description: string;
-  products: string[];
+  products: any;
   internalNotes: string;
 }
 

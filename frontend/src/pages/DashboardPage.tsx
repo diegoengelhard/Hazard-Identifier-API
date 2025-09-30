@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { getProducts, classifySingleBooking, classifyBatch, getSession } from '../api/classificationApi';
 import { IBooking, IClassificationResult, IProduct } from '../ts/interfaces';
+import { readBatchBookings } from '../utils/batchFile';
 import SingleClassificationForm from '../components/SingleClassificationForm';
 import ClassificationStatus from '../components/ClassificationStatus';
 import HistoryPanel from '../components/HistoryPanel';
@@ -88,8 +89,11 @@ function DashboardPage() {
 
     // Call the API to classify the booking
     try {
+      // Call classification API for single booking
       const result = await classifySingleBooking(bookingData);
-      setLatestResult(result);
+      setLatestResult(result); // Update latest result state
+
+      // Update history and persist to localStorage
       setHistory(prev => {
         const next = [result, ...prev].slice(0, 10);
         localStorage.setItem(STORAGE_KEYS.history, JSON.stringify(next));
@@ -104,16 +108,18 @@ function DashboardPage() {
     }
   };
 
+  // Handle batch file input change
   const handleBatchFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file) return;
+    if (!file) return; // No file selected, exit early
 
     setIsLoading(true);
     try {
-      const text = await file.text();
-      const bookings: IBooking[] = JSON.parse(text);
+      // Read and parse the file content
+      const bookings = await readBatchBookings(file);
       const results = await classifyBatch(bookings);
       
+      // Update history and latest result
       setHistory(prev => {
         const next = [...results, ...prev].slice(0, 10);
         localStorage.setItem(STORAGE_KEYS.history, JSON.stringify(next));
@@ -121,7 +127,10 @@ function DashboardPage() {
         return next;
       });
 
+      // Set latest result to the first in the batch
       if (results.length > 0) setLatestResult(results[0]);
+
+      toast.success(`Successfully classified ${results.length} bookings.`);
     } catch (err: any) {
       toast.error('Failed to process batch file. Ensure it is a valid JSON array of bookings.');
       setLatestResult(null);
@@ -131,11 +140,13 @@ function DashboardPage() {
     }
   };
 
+  // Clear cached data and reset state
   const clearCachedData = () => {
     localStorage.removeItem(STORAGE_KEYS.history);
     localStorage.removeItem(STORAGE_KEYS.latest);
     setHistory([]);
     setLatestResult(null);
+    toast.info('Session stats cleared.');
   };
 
   return (
@@ -178,7 +189,7 @@ function DashboardPage() {
         type="file"
         ref={fileInputRef}
         onChange={handleBatchFileChange}
-        accept=".json"
+        accept="application/json,.json"
         className="hidden"
       />
     </div>
