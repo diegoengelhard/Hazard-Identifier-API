@@ -4,7 +4,7 @@ import classificationRouter from './classification.router';
 
 router.use('/identifier', classificationRouter);
 
-/* GET home page. */
+/* GET Test Route */
 router.get('/', (req: Request, res: Response) => {
   res.send('Hello, TypeScript!');
 });
