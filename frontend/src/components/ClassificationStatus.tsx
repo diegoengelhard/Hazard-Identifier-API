@@ -4,43 +4,71 @@ import { IClassificationResult } from '../ts/interfaces';
 interface Props {
   latestResult: IClassificationResult | null;
   history: IClassificationResult[];
-  stats: { totalClassified: number; totalHazardous: number }; 
+  // NEW: averageScore now included (raw)
+  stats: {
+    totalClassified: number;
+    totalHazardous: number;
+    averageScore: number;
+  };
   onClassifyBatchClick: () => void;
 }
 
+/**
+ * Normalizes a raw score into a 0-100 scale for display.
+ * Current heuristic: threshold == 5 (lexicon) is "baseline hazardous".
+ * Scale with a soft ceiling (threshold * 3). Adjust if distribution shifts.
+ */
+function normalizeScoreToPercent(raw: number, threshold = 5): number {
+  if (raw <= 0) return 0;
+  const softMax = threshold * 3; // heuristic
+  return Math.min(100, (raw / softMax) * 100);
+}
+
 function ClassificationStatus({ latestResult, stats, onClassifyBatchClick }: Props) {
-  // Decide panel appearance
-  const resultBgColor = latestResult
-    ? (latestResult.isHazardous ? 'bg-red-500' : 'bg-green-500')
-    : 'bg-gray-200';
-  const resultTextColor = latestResult ? 'text-white' : 'text-gray-600';
-  const resultText = latestResult
+  const avgPercent = normalizeScoreToPercent(stats.averageScore).toFixed(1);
+
+  // Last classification small panel info
+  const lastLabel = latestResult
     ? (latestResult.isHazardous ? 'Hazardous' : 'Non-Hazardous')
-    : 'Awaiting Classification';
+    : '—';
+
+  const lastScore = latestResult ? latestResult.score.toFixed(1) : '0.0';
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-md h-full flex flex-col space-y-4">
+    <div className="bg-white p-6 rounded-lg shadow-md h-full flex flex-col space-y-6">
       <h2 className="text-xl font-bold text-gray-800">Status & Batch Classification</h2>
 
-      {/* Status Banner */}
-      <div className={`p-4 rounded-lg text-center flex flex-col justify-center ${resultBgColor} transition-colors`}>
-        <h3 className={`text-2xl font-bold ${resultTextColor}`}>{resultText}</h3>
-        {latestResult && (
-          <p className={`text-sm ${resultTextColor} opacity-90 mt-1`}>
-            Booking ID: {latestResult.bookingId} &middot; Score: {latestResult.score.toFixed(1)}
-          </p>
-        )}
+      {/* BIG CARD: Average Hazard Score */}
+      <div className="p-6 rounded-lg bg-gradient-to-r from-indigo-500 to-blue-600 text-white flex flex-col items-center justify-center shadow">
+        <p className="uppercase tracking-wider text-xs font-semibold opacity-80 mb-1">Average Hazard Score</p>
+        <div className="text-5xl font-extrabold leading-tight">{avgPercent}<span className="text-lg align-top ml-1">%</span></div>
+        <p className="text-[11px] mt-1 opacity-70">
+          NOTE: This is a heuristic scaling.
+        </p>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <StatCard label="Total Classified Today" value={stats.totalClassified.toLocaleString()} />
-        <StatCard label="Total Hazardous" value={stats.totalHazardous.toLocaleString()} />
+      {/* SMALL STATS GRID */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <StatCard
+          label="Total Classified"
+          value={stats.totalClassified.toLocaleString()}
+          subtle
+        />
+        <StatCard
+          label="Total Hazardous"
+            value={stats.totalHazardous.toLocaleString()}
+          subtle
+        />
+        <StatCard
+          label="Last Classification"
+          value={lastLabel}
+          extra={lastScore}
+          tone={latestResult ? (latestResult.isHazardous ? 'danger' : 'success') : 'neutral'}
+        />
       </div>
 
       <div className="flex-grow" />
 
-      {/* Batch Upload Trigger */}
       <button
         onClick={onClassifyBatchClick}
         className="w-full justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-bold text-white bg-gray-700 hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"

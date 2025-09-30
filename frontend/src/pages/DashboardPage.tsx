@@ -7,15 +7,22 @@ import ClassificationStatus from '../components/ClassificationStatus';
 import HistoryPanel from '../components/HistoryPanel';
 import { toast } from 'react-toastify';
 
+interface StatsState {
+  totalClassified: number;
+  totalHazardous: number;
+  cumulativeScore: number; // NEW: sum of raw scores to compute average
+}
+
 function DashboardPage() {
   const [products, setProducts] = useState<IProduct[]>([]);
   const [latestResult, setLatestResult] = useState<IClassificationResult | null>(null);
   const [history, setHistory] = useState<IClassificationResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   // Persistent cumulative stats separate from limited history
-  const [stats, setStats] = useState<{ totalClassified: number; totalHazardous: number }>({
+  const [stats, setStats] = useState<StatsState>({
     totalClassified: 0,
-    totalHazardous: 0
+    totalHazardous: 0,
+    cumulativeScore: 0
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -29,14 +36,13 @@ function DashboardPage() {
   } as const;
 
   useEffect(() => {
-    // Wrap logic to allow async session fetch
+    // Async init
     (async () => {
       try {
-        // Fetch current backend session id (changes on server restart)
         const { sessionId } = await getSession();
         const storedSession = localStorage.getItem(STORAGE_KEYS.session);
 
-        // If backend restarted (session changed) invalidate volatile cached data
+        // Invalidate transient data on backend restart
         if (storedSession && storedSession !== sessionId) {
           localStorage.removeItem(STORAGE_KEYS.history);
           localStorage.removeItem(STORAGE_KEYS.latest);
@@ -44,10 +50,9 @@ function DashboardPage() {
         }
         localStorage.setItem(STORAGE_KEYS.session, sessionId);
 
-        // Load cached data after session validation
         try {
           const cachedProducts = localStorage.getItem(STORAGE_KEYS.products);
-          if (cachedProducts) setProducts(JSON.parse(cachedProducts));
+            if (cachedProducts) setProducts(JSON.parse(cachedProducts));
 
           const cachedHistory = localStorage.getItem(STORAGE_KEYS.history);
           if (cachedHistory) setHistory(JSON.parse(cachedHistory));
@@ -61,21 +66,18 @@ function DashboardPage() {
           // Ignore JSON parse errors
         }
       } catch {
-        // If session endpoint fails, fallback to prior behavior (best effort)
+        // Fallback if session request fails
         try {
           const cachedProducts = localStorage.getItem(STORAGE_KEYS.products);
           if (cachedProducts) setProducts(JSON.parse(cachedProducts));
-
           const cachedHistory = localStorage.getItem(STORAGE_KEYS.history);
           if (cachedHistory) setHistory(JSON.parse(cachedHistory));
-
           const cachedLatest = localStorage.getItem(STORAGE_KEYS.latest);
           if (cachedLatest) setLatestResult(JSON.parse(cachedLatest));
-
           const cachedStats = localStorage.getItem(STORAGE_KEYS.stats);
           if (cachedStats) setStats(JSON.parse(cachedStats));
         } catch {
-          // Ignore JSON parse errors
+          // Ignore
         }
       }
     })();
@@ -87,7 +89,6 @@ function DashboardPage() {
       try {
         const productList = await getProducts();
         setProducts(productList);
-        // Added: persist product list (stable across reloads & restarts)
         localStorage.setItem(STORAGE_KEYS.products, JSON.stringify(productList));
       } catch {
         toast.error('Could not load product list. Please check if the API is running.');
@@ -96,12 +97,15 @@ function DashboardPage() {
     fetchProducts();
   }, []);
 
+  // Update stats with one or many classification results
   const updateStats = (batchResults: IClassificationResult[]) => {
     const hazardousInBatch = batchResults.reduce((acc, r) => acc + (r.isHazardous ? 1 : 0), 0);
+    const scoreSum = batchResults.reduce((acc, r) => acc + r.score, 0);
     setStats(prev => {
-      const next = {
+      const next: StatsState = {
         totalClassified: prev.totalClassified + batchResults.length,
-        totalHazardous: prev.totalHazardous + hazardousInBatch
+        totalHazardous: prev.totalHazardous + hazardousInBatch,
+        cumulativeScore: prev.cumulativeScore + scoreSum
       };
       localStorage.setItem(STORAGE_KEYS.stats, JSON.stringify(next));
       return next;
@@ -114,15 +118,14 @@ function DashboardPage() {
       const result = await classifySingleBooking(bookingData);
       setLatestResult(result);
 
-      // Update limited history (show last 100)
+      // Limited history (last 100)
       setHistory(prev => {
-        const next = [result, ...prev].slice(0, 10);
+        const next = [result, ...prev].slice(0, 100);
         localStorage.setItem(STORAGE_KEYS.history, JSON.stringify(next));
         localStorage.setItem(STORAGE_KEYS.latest, JSON.stringify(result));
         return next;
       });
 
-      // Update cumulative stats
       updateStats([result]);
     } catch {
       toast.error('An unknown error occurred.');
@@ -132,18 +135,15 @@ function DashboardPage() {
     }
   };
 
-  // Handle batch file input change
   const handleBatchFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
     setIsLoading(true);
     try {
-      // Use higher size limit & normalized parsing (readBatchBookings applies the limit internally)
       const bookings = await readBatchBookings(file);
       const results = await classifyBatch(bookings);
 
-      // Update limited history (prepend batch results then slice)
       setHistory(prev => {
         const next = [...results, ...prev].slice(0, 10);
         localStorage.setItem(STORAGE_KEYS.history, JSON.stringify(next));
@@ -153,9 +153,7 @@ function DashboardPage() {
 
       if (results.length > 0) setLatestResult(results[0]);
 
-      // Update cumulative stats
       updateStats(results);
-
       toast.success(`Successfully classified ${results.length.toLocaleString()} bookings.`);
     } catch (err: any) {
       toast.error(err?.message || 'Failed to process batch file.');
@@ -166,16 +164,20 @@ function DashboardPage() {
     }
   };
 
-  // Clear cached data and reset state
   const clearCachedData = () => {
     localStorage.removeItem(STORAGE_KEYS.history);
     localStorage.removeItem(STORAGE_KEYS.latest);
     localStorage.removeItem(STORAGE_KEYS.stats);
     setHistory([]);
     setLatestResult(null);
-    setStats({ totalClassified: 0, totalHazardous: 0 });
+    setStats({ totalClassified: 0, totalHazardous: 0, cumulativeScore: 0 });
     toast.info('Session stats cleared.');
   };
+
+  // Derived average score (raw). We later scale in the component.
+  const averageScore = stats.totalClassified === 0
+    ? 0
+    : stats.cumulativeScore / stats.totalClassified;
 
   return (
     <div className="bg-gray-100 min-h-screen w-full flex items-center justify-center p-4 sm:p-6 lg:p-8">
@@ -206,7 +208,11 @@ function DashboardPage() {
           <ClassificationStatus
             latestResult={latestResult}
             history={history}
-            stats={stats}
+            stats={{
+              totalClassified: stats.totalClassified,
+              totalHazardous: stats.totalHazardous,
+              averageScore
+            }}
             onClassifyBatchClick={() => fileInputRef.current?.click()}
           />
           <HistoryPanel history={history} />
@@ -222,6 +228,6 @@ function DashboardPage() {
       />
     </div>
   );
-};
+}
 
 export default DashboardPage;

@@ -17,17 +17,14 @@
 (async () => {
   const fs = require('fs');
   const path = require('path');
-  const { faker } = await import('@faker-js/faker'); // ESM import
+  const { faker } = await import('@faker-js/faker');
 
-  // Directories
-  const BACKEND_DIR = path.join(__dirname, '..', '..');          // .../backend
+  const BACKEND_DIR = path.join(__dirname, '..', '..');
   const MOCKS_DIR = path.join(BACKEND_DIR, 'src', 'mocks');
   const LEXICON_PATH = path.join(BACKEND_DIR, 'src', 'utils', 'lexicon.json');
 
-  // Load lexicon
   const lexicon = JSON.parse(fs.readFileSync(LEXICON_PATH, 'utf8'));
 
-  // Args / config
   const argCount = process.argv.find(a => a.startsWith('--count='));
   const NUM_BOOKINGS = argCount ? parseInt(argCount.split('=')[1], 10) : 100000;
   if (!Number.isInteger(NUM_BOOKINGS) || NUM_BOOKINGS <= 0) {
@@ -45,7 +42,7 @@
     if (!fs.existsSync(base)) return base;
     let i = 1;
     while (true) {
-      const suffix = String(i).padStart(2, '0');
+      const suffix = String(i).padStart(2, '2');
       const candidate = path.join(MOCKS_DIR, `${BASE_FILENAME}-${suffix}${EXT}`);
       if (!fs.existsSync(candidate)) return candidate;
       i++;
@@ -55,30 +52,34 @@
   const OUTPUT_FILEPATH = nextFilename();
   console.log(`Generating ${NUM_BOOKINGS.toLocaleString()} mock bookings -> ${path.relative(process.cwd(), OUTPUT_FILEPATH)}`);
 
-  const bookings = [];
   const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+  const bookings = [];
+
+  // Pre-split for performance
+  const hazardousProducts = lexicon.products.filter(p => p.isHazardous);
+  const nonHazProducts = lexicon.products.filter(p => !p.isHazardous);
 
   for (let i = 1; i <= NUM_BOOKINGS; i++) {
-    const hazProducts = lexicon.products.filter(p => p.isHazardous);
-    const nonHazProducts = lexicon.products.filter(p => !p.isHazardous);
-    const hazardousProduct = pick(hazProducts);
-    const nonHazardousProduct = pick(nonHazProducts);
     const randomKeyword = pick(lexicon.keywords);
     const randomBigram = pick(lexicon.bigrams);
+    const hazProduct = pick(hazardousProducts);
+    const nonHazProduct = pick(nonHazProducts);
 
-    const isHazardousAttempt = Math.random() < 0.4;
+    // NEW: Bias to 10% hazardous attempts
+    const isHazardousAttempt = Math.random() < 0.10;
 
     let description = 'Customer is clearing out their garage. Contains old furniture and boxes.';
-    let products = [nonHazardousProduct?.displayName].filter(Boolean);
+    let products = nonHazProduct ? [nonHazProduct.displayName] : [];
     let internalNotes = 'No specific issues mentioned.';
 
-    if (isHazardousAttempt && hazardousProduct) {
+    if (isHazardousAttempt && hazProduct) {
       description = `Contains various items including ${randomKeyword.term}. Also found some ${randomBigram.phrase}.`;
-      products.push(hazardousProduct.displayName);
+      products.push(hazProduct.displayName);
       internalNotes = `Client mentioned items like ${pick(lexicon.keywords).term}.`;
     }
 
-    if (isHazardousAttempt && Math.random() < 0.2 && lexicon.negations?.length) {
+    // Negation injection sometimes to reduce net score
+    if (isHazardousAttempt && Math.random() < 0.15 && lexicon.negations?.length) {
       const negation = pick(lexicon.negations);
       description += ` However, it is a ${negation.term} version.`;
     }
@@ -86,11 +87,11 @@
     bookings.push({
       id: `BK-${faker.string.uuid()}`,
       customerName: faker.person.fullName(),
-      companyName: Math.random() < 0.5 ? faker.company.name() : '',
+      companyName: Math.random() < 0.3 ? faker.company.name() : '',
       bookingDate: faker.date.past({ years: 1 }).toISOString(),
       description,
       products,
-      internalNotes,
+      internalNotes
     });
 
     if (i % 10000 === 0) {
