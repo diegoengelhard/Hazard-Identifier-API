@@ -1,10 +1,6 @@
-/**
- * @file Defines the routes related to booking classification.
- * This router delegates requests to the appropriate controller functions.
- */
-
 import { Router } from 'express';
 import * as ClassificationController from '../controllers/classification.controller';
+import { SESSION_ID } from '../utils/constants';
 
 const router = Router();
 
@@ -19,5 +15,10 @@ router.post('/classify-batch', ClassificationController.classifyBatch);
 // A route to fetch the product list for dropdowns.
 // GET /api/identifier/products
 router.get('/products', ClassificationController.getProducts);
+
+// A route to fetch the session ID.
+router.get('/session', (_req, res) => {
+  res.json({ sessionId: SESSION_ID });
+});
 
 export default router;

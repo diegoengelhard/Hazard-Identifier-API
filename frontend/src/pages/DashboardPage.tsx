@@ -1,38 +1,70 @@
 import { useEffect, useState, useRef } from 'react';
-import { getProducts, classifySingleBooking, classifyBatch } from '../api/classificationApi';
+import { getProducts, classifySingleBooking, classifyBatch, getSession } from '../api/classificationApi';
 import { IBooking, IClassificationResult, IProduct } from '../ts/interfaces';
 import SingleClassificationForm from '../components/SingleClassificationForm';
 import ClassificationStatus from '../components/ClassificationStatus';
 import HistoryPanel from '../components/HistoryPanel';
+import { toast } from 'react-toastify';
 
 function DashboardPage() {
   const [products, setProducts] = useState<IProduct[]>([]);
   const [latestResult, setLatestResult] = useState<IClassificationResult | null>(null);
   const [history, setHistory] = useState<IClassificationResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Storage keys for localStorage
   const STORAGE_KEYS = {
     products: 'id_products',
     history: 'id_history',
-    latest: 'id_latest'
+    latest: 'id_latest',
+    session: 'id_session'
   } as const;
 
   useEffect(() => {
-    try {
-      const cachedProducts = localStorage.getItem(STORAGE_KEYS.products);
-      if (cachedProducts) setProducts(JSON.parse(cachedProducts));
+    // Wrap logic to allow async session fetch
+    (async () => {
+      try {
+        // Fetch current backend session id (changes on server restart)
+        const { sessionId } = await getSession();
+        const storedSession = localStorage.getItem(STORAGE_KEYS.session);
 
-      const cachedHistory = localStorage.getItem(STORAGE_KEYS.history);
-      if (cachedHistory) setHistory(JSON.parse(cachedHistory));
+        // If backend restarted (session changed) invalidate volatile cached data
+        if (storedSession && storedSession !== sessionId) {
+          localStorage.removeItem(STORAGE_KEYS.history);
+          localStorage.removeItem(STORAGE_KEYS.latest);
+        }
+        localStorage.setItem(STORAGE_KEYS.session, sessionId);
 
-      const cachedLatest = localStorage.getItem(STORAGE_KEYS.latest);
-      if (cachedLatest) setLatestResult(JSON.parse(cachedLatest));
-    } catch {
-      // Ignore JSON parse errors
-    }
+        // Load cached data after session validation
+        try {
+          const cachedProducts = localStorage.getItem(STORAGE_KEYS.products);
+          if (cachedProducts) setProducts(JSON.parse(cachedProducts));
+
+          const cachedHistory = localStorage.getItem(STORAGE_KEYS.history);
+          if (cachedHistory) setHistory(JSON.parse(cachedHistory));
+
+          const cachedLatest = localStorage.getItem(STORAGE_KEYS.latest);
+          if (cachedLatest) setLatestResult(JSON.parse(cachedLatest));
+        } catch {
+          // Ignore JSON parse errors
+        }
+      } catch {
+        // If session endpoint fails, fallback to prior behavior (best effort)
+        try {
+          const cachedProducts = localStorage.getItem(STORAGE_KEYS.products);
+          if (cachedProducts) setProducts(JSON.parse(cachedProducts));
+
+          const cachedHistory = localStorage.getItem(STORAGE_KEYS.history);
+          if (cachedHistory) setHistory(JSON.parse(cachedHistory));
+
+          const cachedLatest = localStorage.getItem(STORAGE_KEYS.latest);
+          if (cachedLatest) setLatestResult(JSON.parse(cachedLatest));
+        } catch {
+          // Ignore JSON parse errors
+        }
+      }
+    })();
   }, []);
 
   useEffect(() => {
@@ -41,8 +73,10 @@ function DashboardPage() {
       try {
         const productList = await getProducts();
         setProducts(productList);
+        // Added: persist product list (stable across reloads & restarts)
+        localStorage.setItem(STORAGE_KEYS.products, JSON.stringify(productList));
       } catch (err) {
-        setError('Could not load product list. Please check if the API is running.');
+        toast.error('Could not load product list. Please check if the API is running.');
       }
     };
     fetchProducts();
@@ -51,7 +85,6 @@ function DashboardPage() {
   const handleSingleClassification = async (bookingData: IBooking) => {
     // Set loading state and clear previous errors
     setIsLoading(true);
-    setError(null);
 
     // Call the API to classify the booking
     try {
@@ -64,7 +97,7 @@ function DashboardPage() {
         return next;
       });
     } catch (err: any) {
-      setError('An unknown error occurred.');
+      toast.error('An unknown error occurred.');
       setLatestResult(null);
     } finally {
       setIsLoading(false);
@@ -76,7 +109,6 @@ function DashboardPage() {
     if (!file) return;
 
     setIsLoading(true);
-    setError(null);
     try {
       const text = await file.text();
       const bookings: IBooking[] = JSON.parse(text);
@@ -91,7 +123,7 @@ function DashboardPage() {
 
       if (results.length > 0) setLatestResult(results[0]);
     } catch (err: any) {
-      setError('Failed to process batch file. Ensure it is a valid JSON array of bookings.');
+      toast.error('Failed to process batch file. Ensure it is a valid JSON array of bookings.');
       setLatestResult(null);
     } finally {
       setIsLoading(false);
@@ -116,6 +148,19 @@ function DashboardPage() {
             onSubmit={handleSingleClassification}
             isLoading={isLoading}
           />
+          <button
+            type="button"
+            onClick={() => {
+              if (confirm('Reset session stats? This will clear recent classifications.')) {
+                clearCachedData();
+              }
+            }}
+            className="mt-5 w-full inline-flex items-center justify-center gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold tracking-wide text-red-700 hover:bg-red-100 hover:border-red-300 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-1 transition"
+          >
+            <span aria-hidden className="text-red-500">↺</span>
+            <span>Reset Session (Clear Stats)</span>
+          </button>
+         
         </div>
 
         {/* Right Column */}
@@ -136,13 +181,6 @@ function DashboardPage() {
         accept=".json"
         className="hidden"
       />
-
-      {error && (
-        <div className="fixed bottom-4 right-4 bg-red-600 text-white p-4 rounded-lg shadow-lg z-50">
-          <p className="font-bold">Error</p>
-          <p>{error}</p>
-        </div>
-      )}
     </div>
   );
 };

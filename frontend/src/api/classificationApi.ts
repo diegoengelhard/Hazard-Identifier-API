@@ -59,3 +59,13 @@ export const classifyBatch = async (
   }
   return response.json();
 };
+
+/**
+ * Fetches a unique session identifier from the backend.
+ * @returns {Promise<{ sessionId: string }>} A promise that resolves to an object containing the session ID.
+ */
+export const getSession = async (): Promise<{ sessionId: string }> => {
+  const response = await fetch(`${API_BASE_URL}/session`);
+  if (!response.ok) throw new Error('Failed to fetch session id');
+  return response.json();
+};
