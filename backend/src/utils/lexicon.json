@@ -1,0 +1,112 @@
+{
+  "weights": {
+    "product": 5,
+    "bigram": 4,
+    "technical": 3,
+    "consumer": 2,
+    "regex": 3,
+    "negation_soft": -1,
+    "threshold": 5
+  },
+
+  "keywords": [
+    { "term": "flammable", "type": "technical", "variants": ["ignitable", "combustible", "inflammable", "easily ignited"] },
+    { "term": "explosive", "type": "technical", "variants": ["explodes", "detonates"] },
+    { "term": "oxidizer", "type": "technical", "variants": ["oxidising", "oxidizing agent"] },
+    { "term": "corrosive", "type": "technical", "variants": ["corrodes metal", "corrodes metals", "skin burns"] },
+    { "term": "toxic", "type": "technical", "variants": ["very toxic", "poisonous"] },
+    { "term": "harmful", "type": "technical", "variants": ["noxious"] },
+    { "term": "irritant", "type": "technical", "variants": ["eye irritation", "skin irritation", "irritating"] },
+    { "term": "sensitizer", "type": "technical", "variants": ["respiratory sensitization", "skin sensitization", "sensitising", "sensitizing"] },
+    { "term": "carcinogenic", "type": "technical", "variants": ["may cause cancer", "carcinogen"] },
+    { "term": "mutagenic", "type": "technical", "variants": ["mutagen", "genetic mutation"] },
+    { "term": "reproductive toxicity", "type": "technical", "variants": ["damage fertility", "harm unborn child", "teratogenic"] },
+    { "term": "aspiration hazard", "type": "technical", "variants": ["fatal if swallowed and enters airways", "aspiration"] },
+    { "term": "aquatic toxicity", "type": "technical", "variants": ["toxic to aquatic life", "environmental hazard"] },
+    { "term": "gas under pressure", "type": "technical", "variants": ["compressed gas", "liquefied gas", "pressurized cylinder"] },
+
+    { "term": "paint", "type": "consumer", "variants": ["spray paint", "oil-based paint", "enamel paint"] },
+    { "term": "thinner", "type": "consumer", "variants": ["paint thinner", "mineral spirits", "turpentine"] },
+    { "term": "solvent", "type": "consumer", "variants": ["degreaser", "acetone", "toluene", "xylene"] },
+    { "term": "aerosol", "type": "consumer", "variants": ["spray can"] },
+    { "term": "bleach", "type": "consumer", "variants": ["chlorine bleach", "sodium hypochlorite"] },
+    { "term": "ammonia", "type": "consumer", "variants": ["ammonium hydroxide"] },
+    { "term": "cleaner", "type": "consumer", "variants": ["drain cleaner", "oven cleaner", "toilet cleaner"] },
+    { "term": "acid", "type": "consumer", "variants": ["muriatic acid", "hydrochloric acid", "sulfuric acid", "phosphoric acid"] },
+    { "term": "lye", "type": "consumer", "variants": ["caustic soda", "sodium hydroxide"] },
+    { "term": "battery", "type": "consumer", "variants": ["lithium battery", "li ion battery", "li-ion battery", "lead acid battery", "lead-acid battery", "car battery"] },
+    { "term": "propane", "type": "consumer", "variants": ["propane tank", "lp gas"] },
+    { "term": "gasoline", "type": "consumer", "variants": ["petrol"] },
+    { "term": "diesel", "type": "consumer", "variants": ["diesel fuel"] },
+    { "term": "motor oil", "type": "consumer", "variants": ["engine oil", "used oil"] },
+    { "term": "fertilizer", "type": "consumer", "variants": ["ammonium nitrate", "nitrate fertilizer"] },
+    { "term": "pesticide", "type": "consumer", "variants": ["insecticide", "herbicide", "rodenticide"] },
+    { "term": "antifreeze", "type": "consumer", "variants": ["ethylene glycol", "coolant"] },
+    { "term": "pool chemicals", "type": "consumer", "variants": ["chlorine tablets", "pool shock"] },
+    { "term": "mercury", "type": "consumer", "variants": ["mercury thermometer"] },
+    { "term": "fluorescent lamp", "type": "consumer", "variants": ["fluorescent tube", "cfl bulb"] },
+    { "term": "nail polish remover", "type": "consumer", "variants": ["acetone remover"] },
+    { "term": "glue", "type": "consumer", "variants": ["epoxy", "contact cement"] },
+    { "term": "lighter fluid", "type": "consumer", "variants": ["charcoal lighter"] }
+  ],
+
+  "bigrams": [
+    { "phrase": "highly flammable" },
+    { "phrase": "extremely flammable" },
+    { "phrase": "flammable liquid" },
+    { "phrase": "flammable solid" },
+    { "phrase": "oxidizing agent" },
+    { "phrase": "corrosive to metals" },
+    { "phrase": "causes skin burns" },
+    { "phrase": "toxic if inhaled" },
+    { "phrase": "toxic if swallowed" },
+    { "phrase": "toxic to aquatic life" },
+    { "phrase": "may cause cancer" },
+    { "phrase": "may damage fertility" },
+    { "phrase": "serious eye damage" },
+    { "phrase": "chlorine tablets" },
+    { "phrase": "pool shock" }
+  ],
+
+  "regex": [
+    { "name": "percent solutions (simple)", "pattern": "\\b\\d{1,2}%\\s+(acid|peroxide|bleach)\\b" }
+  ],
+
+  "negations": [
+    { "term": "non-toxic", "variants": ["nontoxic", "non toxic"], "impacts": ["toxic", "harmful"] },
+    { "term": "water-based", "variants": ["water based", "waterborne"], "impacts": ["paint", "solvent"] },
+    { "term": "solvent-free", "variants": ["no solvent", "without solvent", "no solvents"], "impacts": ["solvent", "thinner", "paint"] },
+    { "term": "low voc", "variants": ["low-voc", "low volatile organic"], "impacts": ["paint", "solvent"] },
+    { "term": "latex paint", "impacts": ["paint"] },
+    { "term": "empty container", "impacts": ["aerosol", "solvent", "paint", "bleach", "acid"] },
+    { "term": "battery removed", "impacts": ["battery", "electronics"] }
+  ],
+
+  "products": [
+    { "id": "prod_aerosol",        "displayName": "Aerosol",                         "keywords": ["aerosol", "spray can"],                                   "isHazardous": true  },
+    { "id": "prod_li_battery",     "displayName": "Lithium Battery",                 "keywords": ["lithium battery", "li ion battery", "li-ion battery"],     "isHazardous": true  },
+    { "id": "prod_lead_battery",   "displayName": "Lead-Acid Battery (Car)",         "keywords": ["lead acid battery", "lead-acid battery", "car battery"],   "isHazardous": true  },
+    { "id": "prod_propane",        "displayName": "Propane Tank",                    "keywords": ["propane tank", "lp gas"],                                  "isHazardous": true  },
+    { "id": "prod_gasoline",       "displayName": "Gasoline",                        "keywords": ["gasoline", "petrol"],                                     "isHazardous": true  },
+    { "id": "prod_diesel",         "displayName": "Diesel",                          "keywords": ["diesel", "diesel fuel"],                                   "isHazardous": true  },
+    { "id": "prod_thinner",        "displayName": "Paint Thinner",                   "keywords": ["paint thinner", "mineral spirits", "turpentine"],          "isHazardous": true  },
+    { "id": "prod_solvent",        "displayName": "Solvent",                         "keywords": ["solvent", "degreaser", "acetone", "toluene", "xylene"],    "isHazardous": true  },
+    { "id": "prod_bleach",         "displayName": "Bleach",                          "keywords": ["bleach", "chlorine bleach", "sodium hypochlorite"],        "isHazardous": true  },
+    { "id": "prod_ammonia",        "displayName": "Ammonia",                         "keywords": ["ammonia", "ammonium hydroxide"],                           "isHazardous": true  },
+    { "id": "prod_cleaner_drain",  "displayName": "Drain Cleaner",                   "keywords": ["drain cleaner"],                                           "isHazardous": true  },
+    { "id": "prod_cleaner_oven",   "displayName": "Oven Cleaner",                    "keywords": ["oven cleaner"],                                            "isHazardous": true  },
+    { "id": "prod_muriatic_acid",  "displayName": "Muriatic Acid",                   "keywords": ["muriatic acid", "hydrochloric acid"],                      "isHazardous": true  },
+    { "id": "prod_caustic_soda",   "displayName": "Caustic Soda (Lye)",              "keywords": ["caustic soda", "sodium hydroxide", "lye"],                 "isHazardous": true  },
+    { "id": "prod_fertilizer_an",  "displayName": "Fertilizer (Ammonium Nitrate)",   "keywords": ["ammonium nitrate", "nitrate fertilizer"],                  "isHazardous": true  },
+    { "id": "prod_pool_chems",     "displayName": "Pool Chemicals",                  "keywords": ["pool chemicals", "chlorine tablets", "pool shock"],        "isHazardous": true  },
+    { "id": "prod_mercury_thermo", "displayName": "Mercury Thermometer",             "keywords": ["mercury thermometer"],                                     "isHazardous": true  },
+    { "id": "prod_fluorescent",    "displayName": "Fluorescent Lamp",                "keywords": ["fluorescent lamp", "fluorescent tube", "cfl bulb"],        "isHazardous": true  },
+    { "id": "prod_motor_oil",      "displayName": "Motor Oil",                       "keywords": ["motor oil", "engine oil", "used oil"],                     "isHazardous": true  },
+    { "id": "prod_antifreeze",     "displayName": "Antifreeze",                      "keywords": ["antifreeze", "ethylene glycol"],                           "isHazardous": true  },
+    { "id": "prod_spray_paint",    "displayName": "Spray Paint",                     "keywords": ["spray paint"],                                             "isHazardous": true  },
+    { "id": "prod_paint_oil",      "displayName": "Paint (Oil-Based)",               "keywords": ["oil-based paint", "enamel paint"],                         "isHazardous": true  },
+    { "id": "prod_paint_water",    "displayName": "Paint (Water-Based / Latex)",     "keywords": ["water-based paint", "latex paint"],                        "isHazardous": false },
+    { "id": "prod_electronics",    "displayName": "Electronics (No Battery)",        "keywords": ["electronics"],                                             "isHazardous": false },
+    { "id": "prod_nail_remover",   "displayName": "Nail Polish Remover",             "keywords": ["nail polish remover", "acetone remover"],                  "isHazardous": true  }
+  ]
+}

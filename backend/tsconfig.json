@@ -7,7 +7,8 @@
     "strict": true,                        // Enable strict type checking
     "esModuleInterop": true,               // Needed for ES6-style imports
     "skipLibCheck": true,                  // Skip type checking for libraries
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
   },
   "include": ["*.ts", "bin/**/*.ts", "src/routes/**/*.ts"],  // Includes all TypeScript files in the root, bin, and routes directories
   "exclude": ["dist", "node_modules"]      // Excludes compiled files and dependencies

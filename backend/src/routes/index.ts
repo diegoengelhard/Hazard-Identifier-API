@@ -1,5 +1,8 @@
 import express, { Request, Response } from 'express';
 const router = express.Router();
+import classificationRouter from './classification.router';
+
+router.use('/identifier', classificationRouter);
 
 /* GET home page. */
 router.get('/', (req: Request, res: Response) => {
