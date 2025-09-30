@@ -61,4 +61,4 @@ typings/
 .next
 
 # Ignore batch test data
-src/mocks
+src/mocks/*
